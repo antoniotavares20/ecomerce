@@ -9,6 +9,7 @@ class Page {
 		"footer"=>true,
 		"data"=>[]
 	];
+
 	public function __construct($opts = array(), $tpl_dir = "/views/"){
 		$this->options = array_merge($this->defaults, $opts);
 		$config = array(
@@ -29,6 +30,8 @@ class Page {
 			$this->tpl->assign($key, $value);
 		}
 	}
+
+
 	public function setTpl($name, $data = array(), $returnHTML = false)
 	{
 		$this->setData($data);
