@@ -5,22 +5,21 @@ use \Slim\Slim;
 use \Hcode\Page;
 use \Hcode\PageAdmin;
 use \Hcode\Model\User;
-
+use \Hcode\Model\Category;
 
 $app = new Slim();
 $app->config('debug', true);
 $app->get('/', function() {
-   
+    
 	$page = new Page();
 	$page->setTpl("index");
 });
-
 $app->get('/admin', function() {
-    User::verifyLogin();
+    
+	User::verifyLogin();
 	$page = new PageAdmin();
 	$page->setTpl("index");
 });
-
 $app->get('/admin/login', function() {
 	$page = new PageAdmin([
 		"header"=>false,
@@ -28,99 +27,168 @@ $app->get('/admin/login', function() {
 	]);
 	$page->setTpl("login");
 });
-
-
 $app->post('/admin/login', function() {
 	User::login($_POST["login"], $_POST["password"]);
 	header("Location: /admin");
 	exit;
 });
-
 $app->get('/admin/logout', function() {
 	User::logout();
 	header("Location: /admin/login");
 	exit;
 });
-
-//lista todos os usuarios
-$app->get('/admin/users', function() {
-//verificar se o usuario esta logado e possue acesso adem
-	USER::verifyLogin();
+$app->get("/admin/users", function() {
+	User::verifyLogin();
 	$users = User::listAll();
 	$page = new PageAdmin();
-	$page->setTpl("users",array(
+	$page->setTpl("users", array(
 		"users"=>$users
 	));
 });
-
-
-
-/*$app->get('/admin/users/:iduser', function() {
-	USER::verifyLogin();
-	$users = Users::listALL();
-	$page = new PageAdmin();
-	$page->setTpl("users",array(
-		"users"=>$users
-	));
-});
-*/
-
-//
 $app->get("/admin/users/create", function() {
 	User::verifyLogin();
-	$user = new User();
-	$user->setTpl("users-create");
-	$_POST["inadimin"] = (isset($_POST["inadimin"]))?1:0;
-	$user->setData($_POST);
-	$user->save();
-	header("Location: /admin/users");
-		exit;
-});	
-
-
-//a ordem das rotas interferem nas regras de funcionamento
-//o slin não recebe o metodo delete so via post
-$app->get("/admin/users/delete/:iduser", function($iduser){
-	USER::verifyLogin();
-	//carregar usuario para verificar se ele existe;
+	$page = new PageAdmin();
+	$page->setTpl("users-create");
+});
+$app->get("/admin/users/:iduser/delete", function($iduser) {
+	User::verifyLogin();	
 	$user = new User();
 	$user->get((int)$iduser);
 	$user->delete();
 	header("Location: /admin/users");
 	exit;
-	
 });
-
-//
-$app->get("/admin/users/update/:iduser", function() {
+$app->get("/admin/users/:iduser", function($iduser) {
 	User::verifyLogin();
 	$user = new User();
-	$user->get((int)$idusers);
+	$user->get((int)$iduser);
 	$page = new PageAdmin();
-
 	$page->setTpl("users-update", array(
 		"user"=>$user->getValues()
 	));
-	$page->setTpl("users-update");
+});
+$app->post("/admin/users/create", function() {
+	User::verifyLogin();
+	$user = new User();
+	$_POST["inadmin"] = (isset($_POST["inadmin"]))?1:0;
+	$user->setData($_POST);
+	$user->save();
+	header("Location: /admin/users");
+	exit;
+});
+$app->post("/admin/users/:iduser", function($iduser) {
+	User::verifyLogin();
+	$user = new User();
+	$_POST["inadmin"] = (isset($_POST["inadmin"]))?1:0;
+	$user->get((int)$iduser);
+	$user->setData($_POST);
+	$user->update();	
+	header("Location: /admin/users");
+	exit;
+});
+$app->get("/admin/forgot", function() {
+	User::verifyLogin();
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	$page->setTpl("forgot");	
+});
+$app->post("/admin/forgot", function(){
+	User::verifyLogin();
+	$user = User::getForgot($_POST["email"]);
+	header("Location: /admin/forgot/sent");
+	exit;
+});
+$app->get("/admin/forgot/sent", function(){
+	User::verifyLogin();
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	$page->setTpl("forgot-sent");	
+});
+$app->get("/admin/forgot/reset", function(){
+	User::verifyLogin();
+	$user = User::validForgotDecrypt($_GET["code"]);
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	$page->setTpl("forgot-reset", array(
+		"name"=>$user["desperson"],
+		"code"=>$_GET["code"]
+	));
+});
+$app->post("/admin/forgot/reset", function(){
+	User::verifyLogin();
+	$forgot = User::validForgotDecrypt($_POST["code"]);	
+	User::setFogotUsed($forgot["idrecovery"]);
+	$user = new User();
+	$user->get((int)$forgot["iduser"]);
+	$password = password_hash($_POST["password"], PASSWORD_DEFAULT, [
+		"cost"=>12
+	]);
+	$user->setPassword($password);
+	$page = new PageAdmin([
+		"header"=>false,
+		"footer"=>false
+	]);
+	$page->setTpl("forgot-reset-success");
+});
 
-
+$app->get("/admin/categories", function(){
+	User::verifyLogin();
+	$categories = Category::listAll();
+	$page = new PageAdmin();
+	$page->setTpl("categories", [
+		'categories'=>$categories
+	]);
 });
 
 
+$app->get("/admin/categories/create", function(){
+	User::verifyLogin();
+	$page = new PageAdmin();
+	$page->setTpl("categories-create");
+});
 
+$app->post("/admin/categories/create", function(){
+	User::verifyLogin();
+	$category = new Category();
+	$category->setData($_POST);
+	$category->save();
+	header("Location: /admin/categories");
+	exit();
+});
 
-$app->post("/admin/users/:iduser", function($iduser){
-	USER::verifyLogin();	
+$app->get("/admin/categories/:idcategory/delete", function($idcategory){
+		User::verifyLogin();
+	$category = new Category();
+	$category->get((int)$idcategory);
+	$category->delete();
+	header("Location: /admin/categories");
+	exit();
+});
 
-	$user = new User();
-	$user->get((int)$iduser);
-	$user->setData($_POST);
-	$_POST["inadimin"] = (isset($_POST["inadimin"]))?1:0;
+$app->get("/admin/categories/:idcategory", function($idcategory){
+		User::verifyLogin();
+	$category = new Category();
+	$category->get((int)$idcategory);
+	$page = new PageAdmin();
 
-	$user->update();
-	header("Location: /admin/users");
-	
-	exit;
+	$page->setTpl("categories-update", 
+				['category'=>$category->getValues()]);
+});
+
+$app->post("/admin/categories/:idcategory", function($idcategory){
+	User::verifyLogin();
+	$category = new Category();
+	$category->get((int)$idcategory);
+	$category->setData($_POST);
+	$category->save();
+	header("Location: /admin/categories");
+	exit();
 });
 
 $app->run();

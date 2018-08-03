@@ -25,8 +25,9 @@ class Page {
 
 	}
 	private function setData($data = array())
-	{
+	{//metodo para criar as variaveis dentro do template
 		foreach ($data as $key => $value) {
+			//função para jogar a função no arquivo
 			$this->tpl->assign($key, $value);
 		}
 	}
