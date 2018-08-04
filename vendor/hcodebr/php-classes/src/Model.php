@@ -24,8 +24,7 @@ class Model {
 			$this->{"set".$key}($value);
 		}
 	}
-	public function getValues()
-	{
+	public function getValues(){
 		return $this->values;
 	}
 }
